@@ -1342,9 +1342,9 @@ static INT32 MemIndex()
 
 	RamEnd			= Next;
 
-	pAY8910Buffer[0]	= (INT16*)Next; Next += nBurnSoundLen * sizeof(INT16);
-	pAY8910Buffer[1]	= (INT16*)Next; Next += nBurnSoundLen * sizeof(INT16);
-	pAY8910Buffer[2]	= (INT16*)Next; Next += nBurnSoundLen * sizeof(INT16);
+	pAY8910Buffer[0]	= (INT16*)Next; Next += (nBurnSoundLen+256) * sizeof(INT16);
+	pAY8910Buffer[1]	= (INT16*)Next; Next += (nBurnSoundLen+256) * sizeof(INT16);
+	pAY8910Buffer[2]	= (INT16*)Next; Next += (nBurnSoundLen+256) * sizeof(INT16);
 
 	MemEnd			= Next;
 
@@ -1705,8 +1705,10 @@ INT32 MSXGetZipName(char** pszName, UINT32 i)
 		return 1;
 	}
    // remove msx_
+	memset(szFilename, 0, sizeof(szFilename));
+
 	for (UINT32 j = 0; j < strlen(pszGameName); j++) {
-		szFilename[j] = pszGameName[j + 4];
+		szFilename[j] = pszGameName[j /*+ 4*/];
 	}
 
 	*pszName = szFilename;

@@ -31,8 +31,8 @@
 #include <malloc.h>
 
 #ifdef __PSP2_DEBUG__
-#include <psp2shell.h>
-#define printf psp2shell_print
+#include <psp2/kernel/clib.h>
+#define printf sceClibPrintf
 #endif
 
 #ifndef MAX_PATH
@@ -45,7 +45,11 @@
 
 #define BZIP_MAX (20)                                // Maximum zip files to search through
 #undef DIRS_MAX
+#ifdef __PSP2__
+#define DIRS_MAX (40)                                // Maximum number of directories to search
+#else
 #define DIRS_MAX (4)                                // Maximum number of directories to search
+#endif
 
 // Define macros for appliction title and description
 #ifdef FBA_DEBUG

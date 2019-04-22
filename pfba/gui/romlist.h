@@ -10,6 +10,8 @@
 #include "burner.h"
 #define HARDWARE_PREFIX_ALL 0xffffffff
 
+#include "skin.h"
+
 class RomList {
 
 public:
@@ -31,9 +33,11 @@ public:
         }
     };
 
-    RomList(std::vector<Hardware> *hwList,
-            const std::vector<std::string> &paths);
+    RomList(Io *io, std::vector<Hardware> *hwList,
+            const std::vector<std::string> &paths, Renderer *rdr, Skin *skin);
     ~RomList();
+
+    void DrawSplashScreen(Renderer *rdr, Skin *skin);
 
     enum RomState {
         NOT_WORKING = 0,

@@ -39,13 +39,26 @@ PFBA: Portable Final Burn Alpha
 
 -----
 
-**Linux compilation**
+**Linux (SDL2) compilation**
+
+>- Dependencies (deb) : libsdl2-dev libsdl2-ttf-dev libsdl2-image-dev
 
 >- mkdir cmake-build
 >- cd cmake-build
 >- cmake -DBUILD_SFML=ON -DCMAKE_BUILD_TYPE=Release ..
 >- make pfba.deps
 >- make pfba
+
+**Linux (SFML) compilation**
+
+>- Dependencies (deb) : libsdl2-dev libsdl2-ttf-dev libsdl2-image-dev libsfml-dev libpng-dev
+
+>- mkdir cmake-build
+>- cd cmake-build
+>- cmake -DBUILD_SFML=ON -DCMAKE_BUILD_TYPE=Release ..
+>- make pfba.deps
+>- make pfba
+
 
 **Ps Vita compilation**
 
@@ -62,12 +75,6 @@ PFBA: Portable Final Burn Alpha
 >- cmake -DBUILD_RPI=ON -DBUILD_SDL2=ON -DCMAKE_BUILD_TYPE=Release ..
 >- make pfba.deps
 >- make pfba
-
-**Developers tips**
-
-There is currently two modifications to the original FBA sources :
->- [ARM: fix nec cpu (irem, raiden...)](https://github.com/Cpasjuste/pfba/commit/d1d8bc51457a1f00eecc5a934b94afe5993c7eae)
->- [COMMON: fix eeprom (nvram) loading/saving](https://github.com/Cpasjuste/pfba/commit/e0c5153a530fedcf267e50e047afc8770a2d4ef4)
 
 -----
 

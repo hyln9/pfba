@@ -23,10 +23,23 @@
 #include <psp2/power.h>
 #include <psp2/io/dirent.h>
 int _newlib_heap_size_user = 192 * 1024 * 1024;
-#elif __SDL2__
-#include <sdl2/sdl2_input.h>
+#define SCR_W   960
+#define SCR_H   544
+#elif __PS3__
+#define SCR_W   1280
+#define SCR_H   720
+#elif __3DS__
+#define SCR_W   400
+#define SCR_H   240
+#elif __NX__
+#define SCR_W   1280
+#define SCR_H   720
+#else
+#define SCR_W   800
+#define SCR_H   600
 #endif
 
+Io *io;
 Renderer *renderer;
 Config *config;
 RomList *romList;
@@ -55,9 +68,6 @@ int main(int argc, char **argv) {
 
     std::vector<Skin::Button> buttons;
 #ifdef __PSP2__
-#ifdef __PSP2_DEBUG__
-    psp2shell_init(3333, 0);
-#endif
     // set max cpu speed
     scePowerSetArmClockFrequency(444);
     scePowerSetBusClockFrequency(222);
@@ -88,36 +98,32 @@ int main(int argc, char **argv) {
     buttons.push_back({5, "R"});
     buttons.push_back({10, "SELECT"});
     buttons.push_back({11, "START"});
+#endif
 
-    renderer = (Renderer *) new PSP2Renderer(960, 544);
-    inp = (Input *) new SDL2Input();
-#elif __3DS__
-    renderer = (Renderer *) new CTRRenderer();
-    inp = (Input *) new CTRInput();
-#elif __SDL2__
-    renderer = (Renderer *) new SDL2Renderer(960, 544);
-     inp = (Input *) new SDL2Input();
-#elif __SFML__
+#ifdef __SFML__
     std::string shaderPath = szAppHomePath;
     shaderPath += "shaders/sfml";
-    renderer = (Renderer *) new SFMLRenderer(960, 544, shaderPath);
-    inp = (Input *) new SFMLInput((SFMLRenderer *) renderer);
+    renderer = (Renderer *) new SFMLRenderer(SCR_W, SCR_H, shaderPath);
+#else
+    renderer = (Renderer *) new C2DRenderer(SCR_W, SCR_H);
 #endif
+    inp = (Input *) new C2DInput(renderer);
+    io = (Io *) new C2DIo();
 
     // load configuration
     std::string cfgPath = szAppHomePath;
     cfgPath += "pfba.cfg";
     config = new Config(cfgPath, renderer);
 
-    // build/init roms list
-    romList = new RomList(&config->hardwareList, config->GetRomPaths());
-
     // skin
     int size = config->GetGuiValue(Option::Index::SKIN_FONT_SIZE);
     Skin *skin = new Skin(renderer, szAppSkinPath, size, buttons);
 
+    // build/init roms list
+    romList = new RomList(io, &config->hardwareList, config->GetRomPaths(), renderer, skin);
+
     // run gui
-    gui = new Gui(renderer, skin, romList, config, inp);
+    gui = new Gui(io, renderer, skin, romList, config, inp);
 #ifdef __PSP2__ // prevent rom list scrolling lag on psp2
     gui->SetTitleLoadDelay(500);
 #endif
@@ -128,10 +134,11 @@ int main(int argc, char **argv) {
 
     delete (gui);
     delete (romList);
-    delete (renderer);
     delete (config);
     delete (inp);
     delete (skin);
+    delete (io);
+    delete (renderer);
 
 #ifdef __PSP2__
     scePowerSetArmClockFrequency(266);

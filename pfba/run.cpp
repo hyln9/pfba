@@ -40,6 +40,17 @@ int InpMake(Input::Player *players);
 
 struct timeval start;
 
+void WriteToLog(char *lpszText)
+{
+	FILE *stream = fopen("ux0:/ROMs/a.txt", "at");
+	
+	if(stream != NULL)
+	{
+		fprintf(stream, lpszText);
+		fclose(stream);
+	} // if
+} // End of WriteToLog
+
 void StartTicks(void) {
     gettimeofday(&start, NULL);
 }
@@ -67,20 +78,24 @@ int RunOneFrame(bool bDraw, int bDrawFps, int fps) {
     int rotation = gui->GetConfig()->GetRomValue(Option::Index::ROM_ROTATION);
     int rotate = 0;
     if (BurnDrvGetFlags() & BDF_ORIENTATION_VERTICAL) {
-      if (rotation == 0) {
-      //rotate controls by 90 degrees
-        rotate = 1;
-      }
-      if (rotation == 2) {
-      //rotate controls by 270 degrees
-        rotate = 3;
-      }
+        if (rotation == 0) {
+            //rotate controls by 90 degrees
+            rotate = 1;
+        }
+        if (rotation == 2) {
+            //rotate controls by 270 degrees
+            rotate = 3;
+        }
     }
     Input::Player *players = gui->GetInput()->Update(rotate);
 
     // process menu
     if ((players[0].state & Input::Key::KEY_MENU1)
         && (players[0].state & Input::Key::KEY_MENU2)) {
+#ifdef	FAST_EXIT
+        gui->GetInput()->Clear(0);
+        GameLooping = false;
+#else
         bPauseOn = true;
         if (audio) {
             audio->Pause(1);
@@ -94,6 +109,7 @@ int RunOneFrame(bool bDraw, int bDrawFps, int fps) {
             audio->Pause(0);
         }
         bPauseOn = false;
+#endif
     } else if ((players[0].state & Input::Key::KEY_MENU2)
                && (players[0].state & Input::Key::KEY_FIRE5)) {
         bPauseOn = true;
@@ -179,9 +195,9 @@ int RunOneFrame(bool bDraw, int bDrawFps, int fps) {
             video->Unlock();
             video->Render();
             if (bDrawFps) {
-                gui->GetSkin()->font_small->color = YELLOW;
-                video->renderer->DrawFont(gui->GetSkin()->font_small, 8, 8, "FPS: %2d/%2d", fps, (nBurnFPS / 100));
-                gui->GetSkin()->font_small->color = WHITE;
+                gui->GetSkin()->font->color = C2D_COL_YELLOW;
+                gui->GetSkin()->font->Draw(8, 8, "FPS: %2d/%2d", fps, (nBurnFPS / 100));
+                gui->GetSkin()->font->color = C2D_COL_WHITE;
             }
             video->Flip();
         }
@@ -197,14 +213,16 @@ static int GetSekCpuCore(Gui *g) {
     int sekCpuCore = 0; // SEK_CORE_C68K: USE CYCLONE ARM ASM M68K CORE
     // int sekCpuCore = g->GetConfig()->GetRomValue(Option::Index::ROM_M68K);
 
-    if (!g->GetConfig()->GetRomValue(Option::Index::ROM_NEOBIOS)) {
-        sekCpuCore = 1;
+    std::vector<std::string> zipList;
+    int hardware = BurnDrvGetHardwareCode();
+    
+    if (!g->GetConfig()->GetRomValue(Option::Index::ROM_NEOBIOS)
+        && RomList::IsHardware(hardware, HARDWARE_PREFIX_SNK)) {
+        sekCpuCore = 1; // SEK_CORE_M68K: USE C M68K CORE
         g->MessageBox("UNIBIOS DOESNT SUPPORT THE M68K ASM CORE\n"
                              "CYCLONE ASM CORE DISABLED", "OK", NULL);
     }
 
-    std::vector<std::string> zipList;
-    int hardware = BurnDrvGetHardwareCode();
     if (RomList::IsHardware(hardware, HARDWARE_PREFIX_SEGA)) {
         if (hardware & HARDWARE_SEGA_FD1089A_ENC
             || hardware & HARDWARE_SEGA_FD1089B_ENC
@@ -255,12 +273,19 @@ void AudioInit(Config *cfg) {
     //cfg->GetRomValue(Option::Index::ROM_AUDIO_FMINTERPOLATION) == 0 ? 0 : 3;
 
 #ifdef __3DS__
+    //nBurnSoundRate = 0;
+    //nBurnSoundLen = 0;
+    //pBurnSoundOut = NULL;
+    //audio = NULL;
+    nBurnSoundRate = 44100;
+#endif
+#ifdef __NX__
     nBurnSoundRate = 0;
     nBurnSoundLen = 0;
     pBurnSoundOut = NULL;
     audio = NULL;
 #else
-    audio = (Audio *) new SDL2Audio(nBurnSoundRate, nBurnFPS);
+    audio = (Audio *) new C2DAudio(nBurnSoundRate, nBurnFPS);
     if (audio->available) {
         nBurnSoundRate = audio->frequency;
         nBurnSoundLen = audio->buffer_len;
@@ -285,12 +310,15 @@ void RunEmulator(Gui *g, int drvnum) {
 #endif
     bForce60Hz = true;
     nBurnSoundRate = 0;
-    if(gui->GetConfig()->GetRomValue(Option::Index::ROM_AUDIO) ) {
+    if (gui->GetConfig()->GetRomValue(Option::Index::ROM_AUDIO)) {
         nBurnSoundRate = 48000;
     }
+WriteToLog("Step 1\r\n");
 
     InpInit();
+WriteToLog("Step 2\r\n");
     InpDIP();
+WriteToLog("Step 3\r\n");
 
     printf("Initialize rom driver\n");
     if (DrvInit(drvnum, false) != 0) {
@@ -302,6 +330,7 @@ void RunEmulator(Gui *g, int drvnum) {
         InpExit();
         return;
     }
+WriteToLog("Step 4\r\n");
 
     printf("bForce60Hz = %i, nBurnFPS = %d\n", bForce60Hz, nBurnFPS);
 
@@ -328,6 +357,16 @@ void RunEmulator(Gui *g, int drvnum) {
     StartTicks(); // no frameskip
 
     GameLooping = true;
+
+    // prevent flickering borders by rendering a few frames and
+    // blanking the display afterwards
+    for (int i = 0; i < 9; i++)
+        RunOneFrame(true, 0, 0);
+    for (int i = 0; i < 3; i++) {
+        video->Clear();
+        video->Flip();
+    }
+
     while (GameLooping) {
 
         int showFps = gui->GetConfig()->GetRomValue(Option::Index::ROM_SHOW_FPS);

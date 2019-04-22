@@ -2,59 +2,23 @@ cmake_minimum_required(VERSION 3.0)
 #set(CMAKE_VERBOSE_MAKEFILE ON)
 
 set(CMAKE_SYSTEM_NAME "Generic")
-enable_language(ASM)
 
-# delete cmake cache folder before changing this options
+# delete cmake cache folder before changing this option
 set(BUILD_SFML OFF CACHE BOOL "Build with SFML support")
 set(BUILD_SDL2 OFF CACHE BOOL "Build with SDL2 support")
 set(BUILD_PSP2 OFF CACHE BOOL "Build with PSP2 support")
+set(BUILD_PS3 OFF CACHE BOOL "Build with PS3 support")
 set(BUILD_3DS OFF CACHE BOOL "Build with 3DS support")
 set(BUILD_RPI OFF CACHE BOOL "Build with RPI support")
+set(BUILD_NX OFF CACHE BOOL "Build with NX (SWITCH) support")
 
 if (CMAKE_BUILD_TYPE STREQUAL "Debug")
     set(BUILD_DEBUG true CACHE BOOL "Debug build")
 endif ()
 
-# setup toolchains
-if (BUILD_PSP2)
-    set(VITASDK "/usr/local/vitasdk")
-    set(CMAKE_SYSTEM_PROCESSOR "armv7-a")
-    set(CMAKE_C_COMPILER "${VITASDK}/bin/arm-vita-eabi-gcc")
-    set(CMAKE_CXX_COMPILER "${VITASDK}/bin/arm-vita-eabi-g++")
-    set(CMAKE_ASM_COMPILER "${VITASDK}/bin/arm-vita-eabi-gcc")
-    set(CMAKE_AR "${VITASDK}/bin/arm-vita-eabi-ar")
-    set(CMAKE_RANLIB "${VITASDK}/bin/arm-vita-eabi-ranlib")
-    set(CMAKE_C_FLAGS "-Wl,-q" CACHE STRING "C flags")
-    set(CMAKE_CXX_FLAGS "${CMAKE_C_FLAGS} -std=gnu++11 -fpermissive" CACHE STRING "C++ flags")
-    set(TITLE_ID "VITAFBA01")
-elseif (BUILD_3DS)
-    set(DEVKITPRO "/opt/devkitpro")
-    set(CMAKE_SYSTEM_PROCESSOR "armv6k")
-    set(CMAKE_C_COMPILER "${DEVKITPRO}/devkitARM/bin/arm-none-eabi-gcc")
-    set(CMAKE_CXX_COMPILER "${DEVKITPRO}/devkitARM/bin/arm-none-eabi-g++")
-    set(CMAKE_ASM_COMPILER "${DEVKITPRO}/devkitARM/bin/arm-vita-eabi-as")
-    set(CMAKE_AR "${DEVKITPRO}/devkitARM/bin/arm-none-eabi-gcc-ar" CACHE STRING "")
-    set(CMAKE_RANLIB "${DEVKITPRO}/devkitARM/bin/arm-none-eabi-gcc-ranlib" CACHE STRING "")
-    set(CMAKE_C_FLAGS "-mword-relocations -march=armv6k -mtune=mpcore -mfloat-abi=hard -mtp=soft" CACHE STRING "C flags")
-    set(CMAKE_CXX_FLAGS "-fpermissive -std=gnu++11 -mword-relocations -fno-rtti -fno-exceptions -march=armv6k -mtune=mpcore -mfloat-abi=hard -mtp=soft" CACHE STRING "C++ flags")
-    set(CMAKE_FIND_ROOT_PATH ${DEVKITPRO} ${DEVKITPRO}/devkitARM ${DEVKITPRO}/portlibs/armv6k)
-    set(CMAKE_FIND_ROOT_PATH_MODE_PROGRAM NEVER)
-    set(CMAKE_FIND_ROOT_PATH_MODE_LIBRARY ONLY)
-    set(CMAKE_FIND_ROOT_PATH_MODE_INCLUDE ONLY)
-    set(CMAKE_FIND_ROOT_PATH_MODE_PACKAGE ONLY)
-    SET(BUILD_SHARED_LIBS OFF CACHE INTERNAL "Shared libs not available")
-elseif (BUILD_RPI)
-    set(RPISDK "/usr/local/rpi-tools")
-    set(CMAKE_SYSTEM_PROCESSOR "armv7-a")
-    set(CMAKE_C_COMPILER "${RPISDK}/arm-bcm2708/gcc-linaro-arm-linux-gnueabihf-raspbian/bin/arm-linux-gnueabihf-gcc")
-    set(CMAKE_CXX_COMPILER "${RPISDK}/arm-bcm2708/gcc-linaro-arm-linux-gnueabihf-raspbian/bin/arm-linux-gnueabihf-g++")
-    set(CMAKE_ASM_COMPILER "${RPISDK}/arm-bcm2708/gcc-linaro-arm-linux-gnueabihf-raspbian/bin/arm-linux-gnueabihf-g++")
-    set(CMAKE_C_FLAGS "-I${RPISDK}/sysroot/include" CACHE STRING "C flags")
-    set(CMAKE_CXX_FLAGS "${CMAKE_C_FLAGS} -std=gnu++11 -fpermissive" CACHE STRING "C++ flags")
-else ()
-    set(CMAKE_CXX_FLAGS "${CMAKE_C_FLAGS} -std=gnu++11 -fpermissive" CACHE STRING "C++ flags")
-endif (BUILD_PSP2)
-
+# setup toolchain
+include(pfba/deps/libcross2d/Toolchain.cmake)
+enable_language(ASM)
 
 execute_process(COMMAND "date" "+%Y.%m.%d" OUTPUT_VARIABLE BUILD_DATE OUTPUT_STRIP_TRAILING_WHITESPACE)
 
@@ -141,10 +105,6 @@ file(GLOB_RECURSE SRC_DRV
 list(REMOVE_ITEM SRC_DRV
         ${CMAKE_CURRENT_SOURCE_DIR}/src/burn/drv/capcom/ctv_make.cpp
         ${CMAKE_CURRENT_SOURCE_DIR}/src/burn/drv/pgm/pgm_sprite_create.cpp
-        ${CMAKE_CURRENT_SOURCE_DIR}/src/burn/drv/midway/d_kinst.cpp
-        ${CMAKE_CURRENT_SOURCE_DIR}/src/burn/drv/midway/midwunit.cpp
-        ${CMAKE_CURRENT_SOURCE_DIR}/src/burn/drv/midway/d_wunit.cpp
-        ${CMAKE_CURRENT_SOURCE_DIR}/src/burn/drv/midway/dcs2k.cpp
         )
 
 ##############
@@ -174,7 +134,8 @@ list(REMOVE_ITEM SRC_INTF
 set(CPU_DIRS
         src/cpu
         #src/cpu/a68k
-        #src/cpu/adsp2100
+        src/cpu/adsp2100
+        src/cpu/tms34010
         src/cpu/arm
         src/cpu/arm7
         src/cpu/h6280
@@ -191,19 +152,19 @@ set(CPU_DIRS
         src/cpu/nec
         src/cpu/pic16c5x
         src/cpu/s2650
-        src/cpu/sh2
         src/cpu/tlcs90
-        #src/cpu/tms34010
-        src/cpu/z80
+        src/cpu/sh2
         src/cpu/tms32010
         src/cpu/upd7725
         src/cpu/upd7810
         src/cpu/v60
+        src/cpu/z80
         )
 file(GLOB SRC_CPU
         src/cpu/*.c*
         #src/cpu/a68k/*.c*
-        #src/cpu/adsp2100/*.c*
+        src/cpu/adsp2100/*.c*
+        src/cpu/tms34010/*.c*
         src/cpu/arm/*.c*
         src/cpu/arm7/*.c*
         src/cpu/h6280/*.c*
@@ -220,18 +181,18 @@ file(GLOB SRC_CPU
         src/cpu/nec/*.c*
         src/cpu/pic16c5x/*.c*
         src/cpu/s2650/*.c*
-        src/cpu/sh2/*.c*
         src/cpu/tlcs90/*.c*
-        #src/cpu/tms34010/*.c*
-        src/cpu/z80/*.c*
+        src/cpu/sh2/*.c*
         src/cpu/tms32010/*.c*
         src/cpu/upd7725/*.c*
         src/cpu/upd7810/*.c*
         src/cpu/v60/*.c*
+        src/cpu/z80/*.c*
         )
 list(REMOVE_ITEM SRC_CPU
-        ${CMAKE_CURRENT_SOURCE_DIR}/src/cpu/adsp2100_intf.cpp
-        ${CMAKE_CURRENT_SOURCE_DIR}/src/cpu/tms34010_intf.cpp
+        ${CMAKE_CURRENT_SOURCE_DIR}/src/cpu/adsp2100/2100ops.c
+        ${CMAKE_CURRENT_SOURCE_DIR}/src/cpu/tms34010/tms34010_dasm.cpp
+        ${CMAKE_CURRENT_SOURCE_DIR}/src/cpu/tms34010/tms34010_newdasm.cpp
         ${CMAKE_CURRENT_SOURCE_DIR}/src/cpu/m68k/m68kmake.c
         ${CMAKE_CURRENT_SOURCE_DIR}/src/cpu/m68k/m68k_in.c
         ${CMAKE_CURRENT_SOURCE_DIR}/src/cpu/m68k/m68kfpu.c
@@ -340,19 +301,15 @@ set(INC ${PFBA_DIRS}
 set(FLAGS
         #-DUNICODE
         -DINCLUDE_7Z_SUPPORT
-        -DLSB_FIRST -DUSE_SPEEDHACKS
+        -DUSE_SPEEDHACKS
         -DBUILD_SDL -DBUILD_M68K
         -DTOAPLAN_SOUND_SAMPLES_HACK
         -Wno-write-strings -Wno-narrowing
-        -fforce-addr -fcheck-new -finline-limit=1200
+        -fforce-addr -finline-limit=1200
         -DFASTCALL -U__fastcall -D_fastcall= -D__fastcall= -D__fastcall__=
         "-DINLINE=static inline" "-DSH2_INLINE=static inline"
+        #-fcheck-new
         )
-if (BUILD_DEBUG)
-    list(APPEND FLAGS -g -O0 -DDEBUG)
-else ()
-    list(APPEND FLAGS -O3 -DNDEBUG)
-endif (BUILD_DEBUG)
 
 #################
 # PSP2 (ps vita)
@@ -369,7 +326,7 @@ if (BUILD_PSP2)
     list(APPEND SRC_PFBA ${SRC_PSP2})
     list(APPEND FLAGS
             -Wl,-q -D__PSP2__ -D__PFBA_ARM__
-            -DNO_KEYBOARD -DBUILD_C68K -DUSE_FILE32API)
+            -DNO_KEYBOARD -DBUILD_C68K -DUSE_FILE32API -DLSB_FIRST)
     if (BUILD_DEBUG)
         list(APPEND FLAGS
                 -D__PSP2_DEBUG__ # TODO: cyclone arm asm core not working without O2/O3
@@ -388,43 +345,82 @@ if (BUILD_PSP2)
             cross2d SDL2
             SceDisplay_stub SceGxm_stub SceSysmodule_stub
             SceCtrl_stub ScePgf_stub ScePower_stub SceCommonDialog_stub
-            SceAudio_stub
+            SceAudio_stub SceTouch_stub SceHid_stub
             freetype png jpeg z m c)
-    if (BUILD_DEBUG)
-        list(APPEND LDFLAGS
-                psp2shell SceNetCtl_stub SceNet_stub SceAppMgr_stub)
-    endif (BUILD_DEBUG)
+elseif (BUILD_PS3)
+    ##############
+    # PS3
+    ##############
+    list(APPEND FLAGS
+            -D__PS3__
+            -DNO_KEYBOARD -D__CELLOS_LV2__ -DUSE_FILE32API
+            -mhard-float -ffunction-sections -fdata-sections)
+    set(LDFLAGS
+            cross2d
+            ${PSL1GHT}/ppu/lib/libpngdec.a
+            ${PSL1GHT}/portlibs/ppu/lib/libfreetype.a
+            ${PSL1GHT}/portlibs/ppu/lib/libpng.a
+            ${PSL1GHT}/portlibs/ppu/lib/libtiff.a
+            ${PSL1GHT}/portlibs/ppu/lib/libjpeg.a
+            ${PSL1GHT}/ppu/lib/libgcm_sys.a
+            ${PSL1GHT}/ppu/lib/librsx.a
+            ${PSL1GHT}/ppu/lib/libsysutil.a
+            ${PSL1GHT}/ppu/lib/libsysmodule.a
+            ${PSL1GHT}/ppu/lib/libio.a
+            ${PSL1GHT}/ppu/lib/libaudio.a
+            ${PSL1GHT}/portlibs/ppu/lib/libz.a)
 elseif (BUILD_3DS)
     ##############
     # 3DS
     ##############
     list(APPEND FLAGS -DARM11 -D_3DS -D__3DS__
-            -DNO_KEYBOARD -D__PFBA_ARM__ -DUSE_FILE32API
+            -DNO_KEYBOARD -D__PFBA_ARM__ -DUSE_FILE32API -DLSB_FIRST
             -ffunction-sections -fomit-frame-pointer)
     set(LDFLAGS
             cross2d
-            ${DEVKITPRO}/libctru/lib/libsfil.a
-            ${DEVKITPRO}/libctru/lib/libsftd.a
-            ${DEVKITPRO}/portlibs/armv6k/lib/libfreetype.a
             ${DEVKITPRO}/portlibs/armv6k/lib/libpng.a
-            ${DEVKITPRO}/portlibs/armv6k/lib/libjpeg.a
             ${DEVKITPRO}/portlibs/armv6k/lib/libz.a
-            ${DEVKITPRO}/libctru/lib/libsf2d.a
             ${DEVKITPRO}/libctru/lib/libcitro3d.a
             ${DEVKITPRO}/libctru/lib/libctru.a
+            m)
+elseif (BUILD_NX)
+    ##############
+    # NX (SWITCH)
+    ##############
+    list(APPEND FLAGS -D_NX -D__NX__
+            -DNO_KEYBOARD -D__PFBA_ARM__ -DUSE_FILE32API -DLSB_FIRST
+            -ffunction-sections -fomit-frame-pointer)
+    set(LDFLAGS
+            cross2d
+            ${DEVKITPRO}/portlibs/armv8-a/lib/libpng.a
+            ${DEVKITPRO}/portlibs/armv8-a/lib/libz.a
+            ${DEVKITPRO}/libnx/lib/libnx.a
             m)
 elseif (BUILD_SDL2)
     ##############
     # SDL2
     ##############
-    list(APPEND FLAGS -D__SDL2__)
-    set(LDFLAGS cross2d SDL2 SDL2_image SDL2_ttf png z)
+    list(APPEND FLAGS -D__SDL2__ -DLSB_FIRST)
+    set(LDFLAGS
+            cross2d
+            SDL2
+            SDL2_image
+            SDL2_ttf
+            png
+            z)
 elseif (BUILD_SFML)
     ##############
     # SFML
     ##############
-    list(APPEND FLAGS -D__SFML__)
-    list(APPEND LDFLAGS cross2d SDL2 sfml-graphics sfml-window sfml-system GL png z)
+    list(APPEND FLAGS -D__SFML__ -DLSB_FIRST)
+    set(LDFLAGS
+            cross2d
+            SDL2 sfml-graphics
+            sfml-window
+            sfml-system
+            GL
+            png
+            z)
     ##############
     # RPI
     ##############
@@ -441,7 +437,7 @@ elseif (BUILD_RPI)
     list(APPEND SRC_PFBA ${SRC_RPI})
     # rpi3 compile flags
     list(APPEND FLAGS
-            -D__RPI__ -D__PFBA_ARM__ -DBUILD_C68K -DUSE_FILE32API
+            -D__RPI__ -D__PFBA_ARM__ -DBUILD_C68K -DUSE_FILE32API -DLSB_FIRST
             -march=armv8-a -mcpu=cortex-a53 -mtune=cortex-a53 -mfpu=neon-fp-armv8
             -mfloat-abi=hard -mvectorize-with-neon-quad -funsafe-math-optimizations
             -ffast-math -mlittle-endian -munaligned-access
@@ -467,31 +463,9 @@ endif (BUILD_PSP2)
 # source files
 set(SRC ${SRC_PFBA} ${SRC_CPU} ${SRC_DRV} ${SRC_BURN} ${SRC_BURNER} ${SRC_INTF} ${SRC_7Z} ${SRC_LIBCONFIG})
 
-##########################
-# main target
-##########################
-add_executable(${PROJECT_NAME}.elf ${SRC} ${CMAKE_BINARY_DIR}/deps/m68kops.c)
-target_compile_options(${PROJECT_NAME}.elf PRIVATE ${FLAGS})
-target_include_directories(${PROJECT_NAME}.elf PRIVATE ${INC})
-target_link_libraries(${PROJECT_NAME}.elf cross2d ${LDFLAGS})
-
-#####################
-# PSP2 (vita) vpk
-#####################
-add_custom_target(${PROJECT_NAME}.vpk
-        DEPENDS ${PROJECT_NAME}.elf
-        COMMAND rm -rf vpk && mkdir -p vpk/sce_sys
-        COMMAND ${VITASDK}/bin/vita-elf-create ${PROJECT_NAME}.elf ${PROJECT_NAME}.velf
-        COMMAND ${VITASDK}/bin/vita-make-fself -s -c ${PROJECT_NAME}.velf vpk/eboot.bin
-        COMMAND ${VITASDK}/bin/vita-mksfoex -s TITLE_ID=${TITLE_ID} "${PROJECT_NAME}" vpk/sce_sys/param.sfo
-        COMMAND cp -r ${CMAKE_SOURCE_DIR}/pfba/data/skin vpk/
-        COMMAND cp -r ${CMAKE_SOURCE_DIR}/pfba/data/psp2/* vpk
-        COMMAND cd vpk && zip -r ../${PROJECT_NAME}-${BUILD_DATE}.vpk . && cd ..
-        )
-
-#########
-# Deps
-#########
+############
+# FBA deps
+############
 add_custom_target(${PROJECT_NAME}.deps ALL
         COMMAND rm -rf ${PROJECT_BINARY_DIR}/deps && mkdir ${PROJECT_BINARY_DIR}/deps
         # driverlist.h
@@ -510,15 +484,72 @@ add_custom_target(${PROJECT_NAME}.deps ALL
         COMMAND perl ${CMAKE_SOURCE_DIR}/src/dep/scripts/psikyo_tile_func.pl -o deps/psikyo_tile_func.h
         )
 
+##########################
+# main target
+##########################
+add_executable(${PROJECT_NAME}.elf ${SRC} ${CMAKE_BINARY_DIR}/deps/m68kops.c)
+target_compile_options(${PROJECT_NAME}.elf PRIVATE ${FLAGS})
+target_include_directories(${PROJECT_NAME}.elf PRIVATE ${INC})
+target_link_libraries(${PROJECT_NAME}.elf ${LDFLAGS})
+
+#####################
+# PSP2 (vita) vpk
+#####################
+add_custom_target(${PROJECT_NAME}.vpk
+        DEPENDS ${PROJECT_NAME}.elf
+        COMMAND rm -rf vpk && mkdir -p vpk/sce_sys
+        COMMAND ${VITASDK}/bin/vita-elf-create ${PROJECT_NAME}.elf ${PROJECT_NAME}.velf
+        COMMAND ${VITASDK}/bin/vita-make-fself -s -c ${PROJECT_NAME}.velf vpk/eboot.bin
+        COMMAND ${VITASDK}/bin/vita-mksfoex -s TITLE_ID=${TITLE_ID} "${PROJECT_NAME}" vpk/sce_sys/param.sfo
+        COMMAND cp -r ${CMAKE_SOURCE_DIR}/pfba/data/skin vpk/
+        COMMAND cp -r ${CMAKE_SOURCE_DIR}/pfba/data/psp2/* vpk
+        COMMAND cd vpk && zip -r ../${PROJECT_NAME}-${BUILD_DATE}.vpk . && cd ..
+        )
+
+#####################
+# PS3
+#####################
+add_custom_target(${PROJECT_NAME}.ps3
+        DEPENDS ${PROJECT_NAME}.elf
+        COMMAND ${PSL1GHT}/bin/sprxlinker ${PROJECT_NAME}.elf
+        COMMAND ${PSL1GHT}/bin/make_self ${PROJECT_NAME}.elf ${PROJECT_NAME}.ps3
+        )
+
 #####################
 # CTR (3DS) target
 #####################
-add_executable(${PROJECT_NAME}.3ds ${SRC} ${CMAKE_BINARY_DIR}/deps/m68kops.c)
-target_compile_options(${PROJECT_NAME}.3ds PRIVATE ${FLAGS})
-target_include_directories(${PROJECT_NAME}.3ds PRIVATE
+if (BUILD_3DS)
+    add_executable(${PROJECT_NAME}.3ds ${SRC} ${CMAKE_BINARY_DIR}/deps/m68kops.c)
+    target_compile_options(${PROJECT_NAME}.3ds PRIVATE ${FLAGS})
+    target_include_directories(${PROJECT_NAME}.3ds PRIVATE
+            ${INC}
+            ${DEVKITPRO}/libctru/include
+            ${DEVKITPRO}/portlibs/armv6k/include
+            )
+    target_link_libraries(${PROJECT_NAME}.3ds
+            cross2d
+            ${DEVKITPRO}/portlibs/3ds/lib/libSDL2.a
+            ${LDFLAGS})
+    set_target_properties(${PROJECT_NAME}.3ds PROPERTIES LINK_FLAGS "-specs=3dsx.specs")
+    add_3dsx_target(${PROJECT_NAME}.3ds "pFBA" "FBA 3DS" "Cpasjuste" pfba/data/3ds/icon.png)
+    add_cia_target(${PROJECT_NAME}.3ds pfba/data/3ds/app.rsf pfba/data/3ds/banner.png pfba/data/3ds/audio.wav
+            "pFBA" "FBA 3DS" "Cpasjuste" pfba/data/3ds/icon.png
+            )
+endif (BUILD_3DS)
+
+#####################
+# NX (SWITCH) target
+#####################
+add_executable(${PROJECT_NAME}.nx ${SRC} ${CMAKE_BINARY_DIR}/deps/m68kops.c)
+target_compile_options(${PROJECT_NAME}.nx PRIVATE ${FLAGS})
+target_include_directories(${PROJECT_NAME}.nx PRIVATE
         ${INC}
-        ${DEVKITPRO}/libctru/include
-        ${DEVKITPRO}/portlibs/armv6k/include
+        ${DEVKITPRO}/libnx/include
+        ${DEVKITPRO}/portlibs/armv8-a/include
         )
-target_link_libraries(${PROJECT_NAME}.3ds cross2d ${LDFLAGS})
-set_target_properties(${PROJECT_NAME}.3ds PROPERTIES LINK_FLAGS "-specs=3dsx.specs")
+target_link_libraries(${PROJECT_NAME}.nx cross2d ${LDFLAGS})
+set_target_properties(${PROJECT_NAME}.nx PROPERTIES LINK_FLAGS "-specs=switch.specs")
+add_custom_target(${PROJECT_NAME}.nro
+        DEPENDS ${PROJECT_NAME}.nx
+        COMMAND ${DEVKITPRO}/devkitA64/bin/elf2nro ${PROJECT_NAME}.nx ${PROJECT_NAME}.nro
+        )

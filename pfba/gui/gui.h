@@ -5,8 +5,8 @@
 #ifndef _GUI_H_
 #define _GUI_H_
 
-#include <skeleton/renderer.h>
-#include <skeleton/input.h>
+#include <C2D.h>
+
 #include "skin.h"
 #include "romlist.h"
 #include "config.h"
@@ -17,11 +17,13 @@ class Option;
 
 #define INPUT_DELAY 150
 
+//#define STANDARD_LAYOUT
+
 class Gui {
 
 public:
 
-    Gui(Renderer *rdr, Skin *skin, RomList *rList, Config *cfg, Input *input);
+    Gui(Io* io, Renderer *rdr, Skin *skin, RomList *rList, Config *cfg, Input *input);
 
     ~Gui();
 
@@ -42,7 +44,12 @@ public:
 
     const Rect GetRectTitle();
     const Rect GetRectRomList();
+
+#ifdef STANDARD_LAYOUT
     const Rect GetRectRomPreview();
+#else
+    const Rect GetRectRomTitle();
+#endif
     const Rect GetRectRomInfo();
 
     void UpdateInputMapping(bool isRomCfg);
@@ -59,6 +66,7 @@ private:
 
     bool IsOptionHidden(Option *option);
 
+    Io *io = NULL;
     Config *config = NULL;
     Renderer *renderer = NULL;
     Skin *skin = NULL;
@@ -67,6 +75,9 @@ private:
     Menu *menu_rom = NULL;
     Menu *menu_current = NULL;
 
+#ifndef STANDARD_LAYOUT
+    Texture *preview = NULL;
+#endif
     Texture *title = NULL;
     int title_loaded = 0;
     int title_delay = 0;
